@@ -1,11 +1,11 @@
 package otgrpc
 
 import (
-	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc/metadata"
 	"github.com/opentracing/opentracing-go/ext"
 	"github.com/opentracing/opentracing-go/log"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 // OpenTracingServerInterceptor returns a grpc.UnaryServerInterceptor suitable
@@ -153,9 +153,9 @@ func (ss *openTracingServerStream) Context() context.Context {
 }
 
 func extractSpanContext(ctx context.Context, tracer opentracing.Tracer) (opentracing.SpanContext, error) {
-	md, ok := metadata.FromContext(ctx)
+	md, ok := FromContext(ctx)
 	if !ok {
-		md = metadata.New(nil)
+		md = New(nil)
 	}
 	return tracer.Extract(opentracing.HTTPHeaders, metadataReaderWriter{md})
 }
