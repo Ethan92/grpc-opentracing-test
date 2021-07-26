@@ -1,13 +1,12 @@
 package otgrpc
 
 import (
-	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc/metadata"
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	"github.com/opentracing/opentracing-go/log"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
-
+	"google.golang.org/grpc/metadata"
 	"io"
 	"runtime"
 	"sync/atomic"
@@ -230,9 +229,9 @@ func (cs *openTracingClientStream) CloseSend() error {
 }
 
 func injectSpanContext(ctx context.Context, tracer opentracing.Tracer, clientSpan opentracing.Span, otgrpcOpts *options) context.Context {
-	md, ok := metadata.FromContext(ctx)
+	md, ok := FromContext(ctx)
 	if !ok {
-		md = metadata.New(nil)
+		md = New(nil)
 	} else {
 		md = md.Copy()
 	}
@@ -242,5 +241,26 @@ func injectSpanContext(ctx context.Context, tracer opentracing.Tracer, clientSpa
 	if err != nil && otgrpcOpts.logError {
 		clientSpan.LogFields(log.String("event", "Tracer.Inject() failed"), log.Error(err))
 	}
-	return metadata.NewContext(ctx, md)
+	return NewContext(ctx, md)
+}
+
+// FromContext returns the MD in ctx if it exists.
+func FromContext(ctx context.Context) (md metadata.MD, ok bool) {
+	md, ok = ctx.Value(metadata.mdKey{}).(metadata.MD)
+	return
+}
+
+// New creates a MD from given key-value map.
+func New(m map[string]string) metadata.MD {
+	md := metadata.MD{}
+	for k, v := range m {
+		key, val := metadata.encodeKeyValue(k, v)
+		md[key] = append(md[key], val)
+	}
+	return md
+}
+
+// NewContext creates a new context with md attached.
+func NewContext(ctx context.Context, md metadata.MD) context.Context {
+	return context.WithValue(ctx, metadata.mdKey{}, md)
 }
